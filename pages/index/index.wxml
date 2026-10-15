@@ -1,0 +1,38 @@
+<view class="app">
+  <view class="brand">
+    <view class="brand-icon">☁️</view>
+    <view>
+      <view class="title">云层剖面</view>
+      <view class="subtitle">云层剖面数据预测</view>
+    </view>
+  </view>
+
+  <view class="search-box">
+    <view class="loc-field" bindtap="onPickLocation">
+      <text class="loc-name">{{locName}}</text>
+      <text class="loc-hint">{{locating ? '定位中…' : '点击更换地点'}}</text>
+    </view>
+    <button class="btn locate-btn" bindtap="onRelocate" aria-label="定位当前位置">
+      <view class="locate-mark">
+        <view class="locate-center"></view>
+      </view>
+    </button>
+  </view>
+
+  <view class="source-row">
+    <view class="src-toggle">
+      <view class="src-seg {{dataSource === 'ec' ? 'active' : ''}}" data-src="ec" bindtap="onSwitchSource">ECMWF</view>
+      <view class="src-seg {{dataSource === 'gfs' ? 'active' : ''}}" data-src="gfs" bindtap="onSwitchSource">GFS</view>
+    </view>
+    <view class="range-inline"><text>🕒</text><text>{{infoRange}}</text></view>
+  </view>
+
+  <view class="chart-wrap">
+    <canvas type="2d" id="mainCanvas" class="main-canvas" style="width:100%;height:{{canvasH}}px"
+      bindtouchstart="onCanvasTouchStart" bindtouchmove="onCanvasTouchMove" bindtouchend="onCanvasTouchEnd" bindtouchcancel="onCanvasTouchEnd"></canvas>
+    <view class="loading" wx:if="{{loading}}">加载中...</view>
+  </view>
+
+  <!-- <view class="footer">数据来自 Open-Meteo · Copyright © Yifeng </view> -->
+  <view class="footer">Copyright © Yifeng </view>
+</view>
