@@ -186,6 +186,32 @@ Page({
     }
   },
 
+  // 点击朝霞 / 晚霞卡片 → 打开该事件时刻的光线路径云图
+  openSkyMap(e) {
+    const kind = e.currentTarget.dataset.kind;
+    const sel = this._sel || this.resolveSelection();
+    const sec = (this.data.sections || []).find(s => s.key === kind);
+    if (!sec || !Number.isFinite(sec.eventWallMs)) return;
+
+    const q = [
+      `lat=${sel.lat}`,
+      `lon=${sel.lon}`,
+      `name=${encodeURIComponent(sel.name || '')}`,
+      `kind=${kind}`,
+      `t=${sec.eventWallMs}`,
+      `az=${sec.sunAzimuth}`,
+      `src=${this.data.dataSource}`
+    ].join('&');
+
+    wx.navigateTo({
+      url: `/pages/skymap/skymap?${q}`,
+      fail: err => {
+        console.warn('[afterglow] 打开光线路径云图失败', err);
+        wx.showToast({ title: '打开云图失败', icon: 'none' });
+      }
+    });
+  },
+
   applyData(raw, sel, selectedDay) {
     const h = raw.hourly;
     const tzSec = Number(raw.utc_offset_seconds) || 0;
@@ -304,6 +330,8 @@ Page({
     return {
       key: kind,
       tone: kind,
+      eventWallMs: Math.round(eventWallMs),
+      sunAzimuth: Math.round(pos.azimuth),
       icon: isDawn ? '🌅' : '🌇',
       label: isDawn ? '朝霞' : '晚霞',
       dateLabel: dayLabel(eventWallMs, nowWall),

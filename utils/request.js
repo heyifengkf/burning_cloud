@@ -74,4 +74,38 @@ const fetchData = async (lat, lon, model = 'ec') => {
   return j1;
 };
 
-module.exports = { reverseGeocode, fetchData, LEVELS_HPAS, API_MODEL, FORECAST_HOURS };
+// 光线路径云图：一次请求取多个采样点的逐小时云量。
+// points: [{ latitude, longitude }]；dateStr: 'YYYY-MM-DD'（站点当地日期）
+// 只取当天 24 小时，响应体积远小于完整预报；返回数组顺序与 points 一致。
+const CLOUD_GRID_VARS = 'cloud_cover,cloud_cover_low,cloud_cover_mid,cloud_cover_high';
+
+const fetchCloudGrid = async (points, dateStr, model = 'ec') => {
+  if (!points || !points.length) return null;
+  const key = LEVELS_HPAS[model] ? model : 'ec';
+  const lats = points.map(p => p.latitude.toFixed(3)).join(',');
+  const lons = points.map(p => p.longitude.toFixed(3)).join(',');
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lats}&longitude=${lons}`
+    + `&hourly=${CLOUD_GRID_VARS}&models=${API_MODEL[key]}`
+    + `&start_date=${dateStr}&end_date=${dateStr}&timezone=auto&_=${Date.now()}`;
+
+  const j = await getJSON(url);
+  if (!j) {
+    console.warn('[request] 云图网格数据为空', key, dateStr);
+    return null;
+  }
+  const list = Array.isArray(j) ? j : [j];
+  if (list.length !== points.length) {
+    console.warn('[request] 云图网格点数不匹配', list.length, points.length, j && j.reason);
+    return null;
+  }
+  return list;
+};
+
+module.exports = {
+  reverseGeocode,
+  fetchData,
+  fetchCloudGrid,
+  LEVELS_HPAS,
+  API_MODEL,
+  FORECAST_HOURS
+};

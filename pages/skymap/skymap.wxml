@@ -1,0 +1,77 @@
+<view class="page">
+  <view class="head">
+    <view class="h-icon">{{isDawn ? '🌅' : '🌇'}}</view>
+    <view class="h-main">
+      <view class="h-title">{{title}}</view>
+      <view class="h-sub">{{dateLabel}} {{timeLabel}} · {{locName}}</view>
+    </view>
+  </view>
+
+  <view class="h-note">
+    光线自太阳方位角 {{bearingText}} 方向射入，地图只渲染这条走廊与地点上空 0–{{maxKm}}km 的云量
+  </view>
+
+  <map
+    id="skyMap"
+    class="sky-map"
+    latitude="{{center.latitude}}"
+    longitude="{{center.longitude}}"
+    scale="{{scale}}"
+    min-scale="4"
+    max-scale="16"
+    polygons="{{polygons}}"
+    polyline="{{polyline}}"
+    circles="{{circles}}"
+    include-points="{{includePoints}}"
+    show-location="{{false}}"
+    enable-zoom="{{true}}"
+    enable-scroll="{{true}}"
+    enable-rotate="{{false}}"
+    enable-overlooking="{{false}}"></map>
+
+  <view class="layer-switch">
+    <view
+      class="layer-opt {{layer === item.key ? 'active' : ''}}"
+      wx:for="{{layers}}"
+      wx:for-item="item"
+      wx:key="key"
+      data-layer="{{item.key}}"
+      bindtap="onSwitchLayer">{{item.name}}</view>
+  </view>
+
+  <view class="stats" wx:if="{{stats && !loading && !error}}">
+    <view class="stat">
+      <view class="s-val">{{stats.overhead}}</view>
+      <view class="s-label">地点上空</view>
+    </view>
+    <view class="stat">
+      <view class="s-val">{{stats.mean}}</view>
+      <view class="s-label">路径平均</view>
+    </view>
+    <view class="stat">
+      <view class="s-val">{{stats.max}}</view>
+      <view class="s-label">路径最大</view>
+    </view>
+    <view class="stat">
+      <view class="s-val">{{stats.covered}}</view>
+      <view class="s-label">有云格子</view>
+    </view>
+  </view>
+
+  <view class="status" wx:if="{{loading}}">云量数据加载中…</view>
+  <view class="status err" wx:if="{{error}}" bindtap="onRetry">{{error}}</view>
+
+  <view class="legend" wx:if="{{!error}}">
+    <view class="legend-bar" style="background:{{legendGradient}}"></view>
+    <view class="legend-txt">
+      <text>云量 少</text>
+      <text>颜色越实云量越高（≥5% 才着色）</text>
+      <text>多</text>
+    </view>
+  </view>
+
+  <view class="foot-note">
+    采样自 Open-Meteo 网格点（{{srcLabel}}），时间取 {{dateLabel}} {{timeLabel}} 前后最近整点。
+    橙色圆点是观测地点，橙色箭头指向太阳（光线来向），灰色圆环为 20/40/60/80km 距离参考。
+  </view>
+</view>
