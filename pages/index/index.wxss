@@ -67,3 +67,21 @@
   position:absolute; left:0; right:0; top:10px;
   text-align:center; color:#aac8e0; font-size:12px;
 }
+
+/* 云层高度备注 */
+.cloud-legend {
+  display:flex; align-items:center; justify-content:space-between; gap:6px;
+  margin-top:8px; padding:6px 10px;
+  background:#0c1220; border-radius:8px;
+}
+.legend-item { display:flex; align-items:center; gap:4px; min-width:0; }
+.legend-dot { width:8px; height:8px; border-radius:2px; flex:none; }
+.legend-dot.low { background:#5b9bd5; }
+.legend-dot.mid { background:#9b7bd5; }
+.legend-dot.high { background:#e8f0fa; }
+.legend-name { font-size:11px; color:#aac8e0; }
+.legend-alt { font-size:11px; color:#667a90; }
+.legend-note {
+  font-size:10px; color:#556680; line-height:1.5;
+  margin-top:6px; padding:0 2px;
+}

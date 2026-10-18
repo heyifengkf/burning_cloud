@@ -70,6 +70,8 @@ Page({
     this._raw = null;
     this._fetchedAt = 0;
     this._seq = 0;
+    // 还没手动点过「今日/明日」时，按今日晚霞是否已过自动决定默认日期
+    this._dayAuto = true;
   },
 
   onShow() {
@@ -169,6 +171,8 @@ Page({
 
   selectDay(e) {
     const selectedDay = e.currentTarget.dataset.day;
+    // 手动选择后不再自动切换
+    this._dayAuto = false;
     if (selectedDay === this.data.selectedDay) return;
 
     this.setData({ selectedDay, error: '' });
@@ -189,7 +193,9 @@ Page({
     if (!times.length) throw new Error('时间序列为空');
 
     const nowWall = Date.now() + tzSec * 1000;
-    const dayOffset = selectedDay === 'tomorrow' ? 1 : 0;
+    const day = this.resolveDay(selectedDay, nowWall, tzSec, sel);
+    if (day !== selectedDay) this.setData({ selectedDay: day });
+    const dayOffset = day === 'tomorrow' ? 1 : 0;
     const events = this.findDayEvents(times, tzSec, sel.lat, sel.lon, nowWall, dayOffset);
 
     const sections = [];
@@ -204,6 +210,16 @@ Page({
     }
 
     this.setData({ sections });
+  },
+
+  // 默认日期：今日晚霞已过 → 明日；尚未到今日晚霞 → 今日。
+  // 用户手动点过「今日/明日」后不再自动切换（_dayAuto 为 false）。
+  resolveDay(selectedDay, nowWall, tzSec, sel) {
+    if (!this._dayAuto) return selectedDay;
+    const today = solar.sunEventsForDate(solar.wallDateStr(nowWall), sel.lat, sel.lon, tzSec);
+    // 极昼/极夜没有日落时刻，保持原有选择
+    if (today.polar || !Number.isFinite(today.setWallMs)) return selectedDay;
+    return nowWall > today.setWallMs ? 'tomorrow' : 'today';
   },
 
   // 取所选当地日期的日出与日落，不因事件已过去而跳过。

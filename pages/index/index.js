@@ -9,10 +9,43 @@ const ALT_BY_HPA = {
   200: 11800, 150: 13600, 100: 16200, 50: 20500
 };
 const MAX_CLOUD_ALT_M = 10000;
-// 各模式需要标出文字刻度的层
+// 非均匀高度轴：低云 0–2km、中云 2–5km、高云 5–10km 各占 1/3 画布高度。
+// 高云的实际范围是 5–10km，与中云在 5–7km 重叠，这里按连续刻度把 5km 以上统一归入高云区。
+const CLOUD_BAND_ALTS = [0, 2000, 5000, MAX_CLOUD_ALT_M];
+const CLOUD_BAND_FRACS = [0, 1 / 3, 2 / 3, 1];
+
+// 海拔 → 0~1（自下而上的画布占比）
+function altToFrac(alt) {
+  const a = Math.max(CLOUD_BAND_ALTS[0], Math.min(MAX_CLOUD_ALT_M, alt));
+  for (let i = 0; i < CLOUD_BAND_ALTS.length - 1; i++) {
+    const a0 = CLOUD_BAND_ALTS[i];
+    const a1 = CLOUD_BAND_ALTS[i + 1];
+    if (a <= a1) {
+      const k = (a - a0) / (a1 - a0);
+      return CLOUD_BAND_FRACS[i] + k * (CLOUD_BAND_FRACS[i + 1] - CLOUD_BAND_FRACS[i]);
+    }
+  }
+  return 1;
+}
+
+// 0~1 画布占比 → 海拔（altToFrac 的反函数，供逐像素渲染使用）
+function fracToAlt(frac) {
+  const f = Math.max(0, Math.min(1, frac));
+  for (let i = 0; i < CLOUD_BAND_FRACS.length - 1; i++) {
+    const f0 = CLOUD_BAND_FRACS[i];
+    const f1 = CLOUD_BAND_FRACS[i + 1];
+    if (f <= f1) {
+      const k = (f - f0) / (f1 - f0);
+      return CLOUD_BAND_ALTS[i] + k * (CLOUD_BAND_ALTS[i + 1] - CLOUD_BAND_ALTS[i]);
+    }
+  }
+  return MAX_CLOUD_ALT_M;
+}
+
+// 各模式需要标出文字刻度的层（2km / 5km 由三等分分界线单独标注）
 const LEVEL_LABELS = {
-  ec: { 1000: '110m', 925: '800m', 850: '1.5km', 700: '3km', 500: '5km', 300: '9km', 200: '12km', 100: '16km', 50: '20km' },
-  gfs: { 1000: '110m', 950: '500m', 900: '1km', 800: '2km', 700: '3km', 500: '5km', 300: '9km', 200: '12km', 100: '16km', 50: '20km' }
+  ec: { 1000: '110m', 925: '800m', 850: '1.5km', 700: '3km', 300: '9km' },
+  gfs: { 1000: '110m', 950: '500m', 900: '1km', 700: '3km', 300: '9km' }
 };
 
 function buildLevels(src) {
@@ -383,8 +416,8 @@ Page({
     const dx = LABEL_W;
     const drawW = colW * visH;
     const cloudInnerH = CLOUD_H - CLOUD_PAD_TOP - CLOUD_PAD_BOT;
-    const lvlY = li => CLOUD_PAD_TOP + cloudInnerH
-      - (levels[li].alt / MAX_CLOUD_ALT_M) * cloudInnerH;
+    const altY = alt => CLOUD_PAD_TOP + cloudInnerH * (1 - altToFrac(alt));
+    const lvlY = li => altY(levels[li].alt);
 
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.fillStyle = '#0a1020';
@@ -409,18 +442,16 @@ Page({
     for (let li = 0; li < nL; li++) {
       if (levels[li].albl) ctx.fillText(levels[li].albl, LABEL_W - 6, lvlY(li));
     }
+    // 三等分分界线刻度
+    ctx.fillText('2km', LABEL_W - 6, altY(2000));
+    ctx.fillText('5km', LABEL_W - 6, altY(5000));
     ctx.fillText(`${MAX_CLOUD_ALT_M / 1000}km`, LABEL_W - 6, CLOUD_PAD_TOP);
     ctx.fillText('0m', LABEL_W - 6, CLOUD_H + 4);
     ctx.restore();
 
-    // ---- 2km / 5km 参考线 ----
+    // ---- 低/中/高云分界参考线（2km、5km 正好落在三等分处）----
     const hlLine = (alt, color) => {
-      let best = 0, bd = Infinity;
-      for (let li = 0; li < nL; li++) {
-        const d = Math.abs(levels[li].alt - alt);
-        if (d < bd) { bd = d; best = li; }
-      }
-      const y = lvlY(best);
+      const y = altY(alt);
       ctx.save();
       ctx.strokeStyle = color;
       ctx.lineWidth = 1;
@@ -602,7 +633,7 @@ Page({
     const maxL = nL - 1;
     const maxT = T - 1;
     for (let py = 0; py < imgH; py++) {
-      const altitude = (1 - (py + 0.5) / imgH) * MAX_CLOUD_ALT_M;
+      const altitude = fracToAlt(1 - (py + 0.5) / imgH);
       let l0 = 0;
       while (l0 < maxL - 1 && levels[l0 + 1].alt < altitude) l0++;
       const l1 = Math.min(l0 + 1, maxL);
@@ -652,10 +683,8 @@ Page({
       const upperAlt = li === nL - 1
         ? MAX_CLOUD_ALT_M
         : Math.min(MAX_CLOUD_ALT_M, (levels[li].alt + levels[li + 1].alt) / 2);
-      const yTop = CLOUD_PAD_TOP + cloudInnerH
-        - (upperAlt / MAX_CLOUD_ALT_M) * cloudInnerH;
-      const yBot = CLOUD_PAD_TOP + cloudInnerH
-        - (lowerAlt / MAX_CLOUD_ALT_M) * cloudInnerH;
+      const yTop = CLOUD_PAD_TOP + cloudInnerH * (1 - altToFrac(upperAlt));
+      const yBot = CLOUD_PAD_TOP + cloudInnerH * (1 - altToFrac(lowerAlt));
       for (let vi = 0; vi < T; vi++) {
         const v = grid[li][vi];
         if (v < 0.025) continue;
