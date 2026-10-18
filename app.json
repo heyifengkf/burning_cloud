@@ -1,0 +1,38 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/tab2/tab2",
+    "pages/tab3/tab3"
+  ],
+  "window": {
+    "backgroundTextStyle": "light",
+    "navigationBarBackgroundColor": "#0a0e17",
+    "navigationBarTitleText": "Fiery Cloud",
+    "navigationBarTextStyle": "white"
+  },
+  "permission": {
+    "scope.userLocation": {
+      "desc": "用于获取当前位置并展示当地的云层剖面"
+    }
+  },
+  "requiredPrivateInfos": [
+    "getLocation",
+    "chooseLocation"
+  ],
+  "tabBar": {
+    "color": "#667a90",
+    "selectedColor": "#5b9bd5",
+    "backgroundColor": "#0a0e17",
+    "borderStyle": "white",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "云图"
+      },
+      {
+        "pagePath": "pages/tab2/tab2",
+        "text": "火烧云"
+      }
+    ]
+  }
+}
